@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Kawruh Kalang - Premium Native Experience</title>
+    
+    <!-- CSS Framework & Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&family=Noto+Sans+Javanese&display=swap" rel="stylesheet">
+    
+    <!-- Icons & Map Libraries -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        :root {
+            --app-bg: #09090b;
+            --accent: #f59e0b;
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #000;
+            color: #f8fafc;
+            -webkit-tap-highlight-color: transparent; 
+            overscroll-behavior-y: none;
+        }
+        .title-font { font-family: 'Space Grotesk', sans-serif; }
+        .font-javanese { font-family: 'Noto Sans Javanese', sans-serif; }
+        
+        .app-container {
+            max-w: 430px;
+            margin: 0 auto;
+            background-color: var(--app-bg);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(245, 158, 11, 0.04), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(99, 102, 241, 0.04), transparent 25%);
+            min-height: 100dvh;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .scrollable-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-bottom: calc(110px + env(safe-area-inset-bottom));
+            scrollbar-width: none;
+            scroll-behavior: smooth;
+        }
+        .scrollable-content::-webkit-scrollbar { display: none; }
+
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Bottom Navigation Premium State */
+        .nav-item { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; opacity: 0.5; }
+        .nav-item .icon-box { transition: all 0.3s ease; border-radius: 99px; padding: 8px 16px; }
+        .nav-item.active { opacity: 1; }
+        .nav-item.active .icon-box { background: rgba(245, 158, 11, 0.12); }
+        .nav-item.active i { color: var(--accent); fill: rgba(245, 158, 11, 0.2); }
+        .nav-item.active span { color: var(--accent); font-weight: 700; }
+
+        .compass-arrow { transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease; }
+        .compass-dial-transition { transition: transform 0.1s ease-out; }
+        
+        @keyframes popIn { 
+            0% { opacity: 0; transform: scale(0.96) translateY(10px); } 
+            100% { opacity: 1; transform: scale(1) translateY(0); } 
+        }
+        .animate-pop { animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        .compass-ticks { background: repeating-conic-gradient(from 0deg, rgba(255,255,255,0.1) 0deg 1deg, transparent 1deg 5deg); -webkit-mask-image: radial-gradient(transparent 65%, black 66%); }
+        .compass-ticks-major { background: repeating-conic-gradient(from -1deg, rgba(255,255,255,0.3) 0deg 2deg, transparent 2deg 30deg); -webkit-mask-image: radial-gradient(transparent 60%, black 61%); }
+    </style>
+</head>
+<body class="antialiased text-slate-200">
+
+    <div class="app-container">
+        <!-- Sticky Premium Header -->
+        <header class="pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 px-6 sticky top-0 z-40 bg-zinc-950/70 backdrop-blur-xl border-b border-white/5">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span id="greeting-text" class="text-[9px] text-zinc-500 uppercase tracking-[0.2em] font-bold">Rahayu, Sugeng Rawuh</span>
+                    <h1 class="text-xl font-bold title-font bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent tracking-tight">Kawruh Kalang</h1>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-zinc-900/50 border border-white/5 flex items-center justify-center text-amber-500 shadow-inner"><i data-lucide="moon-star" class="w-5 h-5"></i></div>
+            </div>
+        </header>
+
+        <main class="scrollable-content" id="main-content">
+            
+            <!-- TAB 1: BERANDA -->
+            <div id="tab-beranda" class="p-5 block animate-pop">
+                <div class="glass-panel rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center relative overflow-hidden mb-6 shadow-2xl">
+                    <div class="absolute -top-10 -right-10 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl animate-pulse"></div>
+                    <div id="current-time" class="text-7xl font-bold title-font tracking-tighter text-white mb-1 drop-shadow-2xl">00:00</div>
+                    <div id="current-date" class="text-xs text-zinc-500 font-bold uppercase tracking-widest">Memuat...</div>
+                </div>
+
+                <div class="bg-zinc-900/60 rounded-[2rem] p-6 relative overflow-hidden mb-6 group shadow-lg border border-white/5">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                                <span class="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">Resonansi Alam</span>
+                            </div>
+                            <div id="current-weton" class="text-3xl font-bold text-white tracking-tight">Memuat...</div>
+                            <div id="current-neptu" class="text-xs text-amber-500/80 font-mono mt-1 font-bold">Neptu: -</div>
+                        </div>
+                        <div class="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center"><i data-lucide="sparkles" class="w-6 h-6 text-amber-500"></i></div>
+                    </div>
+                    
+                    <div class="space-y-3 border-t border-white/5 pt-5">
+                        <div class="bg-black/40 p-4 rounded-2xl border border-white/5">
+                            <h4 class="text-[9px] text-zinc-500 uppercase font-bold mb-1 tracking-widest">Watak Hari</h4>
+                            <p id="beranda-watak" class="text-xs text-zinc-200 leading-relaxed font-light">-</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-black/40 p-4 rounded-2xl border border-white/5">
+                                <h4 class="text-[9px] text-emerald-500 uppercase font-bold mb-1 tracking-widest">Sandang Pangan</h4>
+                                <p id="beranda-rezeki" class="text-sm font-bold text-emerald-400">-</p>
+                            </div>
+                            <div class="bg-black/40 p-4 rounded-2xl border border-white/5">
+                                <h4 class="text-[9px] text-rose-500 uppercase font-bold mb-1 tracking-widest">Naga Dina</h4>
+                                <p id="beranda-naga" class="text-sm font-bold text-rose-400">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button onclick="switchTab('tab-pitedah')" class="w-full bg-zinc-800 text-white py-4 rounded-[1.5rem] text-sm font-bold border border-white/5 shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
+                    Buka Pitedah Personal <i data-lucide="arrow-right" class="w-4 h-4 text-amber-500"></i>
+                </button>
+            </div>
+
+            <!-- TAB 2: PITEDAH (Gabungan Kalkulasi & Petuah) -->
+            <div id="tab-pitedah" class="p-5 hidden animate-pop">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold title-font tracking-tight">Pitedah Nasib</h2>
+                    <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Sinkronisasi Energi Batin & Alam</p>
+                </div>
+                
+                <div class="flex bg-zinc-950 p-1.5 rounded-2xl mb-6 border border-white/5">
+                    <button onclick="setCalcMode('harian')" id="btn-mode-harian" class="flex-1 py-3 rounded-xl bg-amber-500 text-zinc-950 font-bold text-xs shadow-md transition-all">Energi Harian</button>
+                    <button onclick="setCalcMode('jodoh')" id="btn-mode-jodoh" class="flex-1 py-3 rounded-xl text-zinc-500 font-bold text-xs transition-all">Kecocokan Jodoh</button>
+                </div>
+
+                <div class="glass-panel p-6 rounded-[2rem] mb-6 shadow-2xl">
+                    <div class="space-y-5">
+                        <div class="space-y-2">
+                            <label id="label-birth-date" class="text-[10px] text-zinc-500 uppercase font-bold pl-1 tracking-widest">Tanggal Lahir Anda</label>
+                            <input type="date" id="birth-date" class="w-full p-4 bg-zinc-900/80 border border-white/5 rounded-2xl text-sm text-white outline-none focus:border-amber-500 appearance-none shadow-inner">
+                        </div>
+                        <div id="input-partner-container" class="hidden space-y-2">
+                            <label class="text-[10px] text-zinc-500 uppercase font-bold pl-1 tracking-widest">Tanggal Lahir Pasangan</label>
+                            <input type="date" id="partner-date" class="w-full p-4 bg-zinc-900/80 border border-white/5 rounded-2xl text-sm text-white outline-none focus:border-rose-500 appearance-none shadow-inner">
+                        </div>
+                        <button id="btn-calculate" onclick="calculateKawruhKalang()" class="w-full bg-amber-500 text-zinc-950 py-4 rounded-2xl font-bold text-sm shadow-[0_10px_30px_rgba(245,158,11,0.2)] active:scale-95 transition-all mt-2">Singkap Tabir</button>
+                    </div>
+                </div>
+
+                <!-- HASIL HARIAN KOMPREHENSIF -->
+                <div id="result-section" class="hidden opacity-0 transition-opacity duration-500">
+                    
+                    <!-- Header Energi Utama -->
+                    <div class="glass-panel p-8 rounded-[3rem] text-center shadow-2xl relative overflow-hidden border-amber-500/20 mb-6">
+                        <div class="absolute inset-0 bg-gradient-to-b from-amber-500/10 to-transparent"></div>
+                        <h2 id="solusi-status-name" class="text-6xl title-font font-bold"></h2>
+                        <p id="solusi-status-desc" class="text-[10px] uppercase mt-4 tracking-[0.4em] font-bold text-amber-500/80"></p>
+                    </div>
+
+                    <!-- Ringkasan Petungan -->
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-zinc-900/60 p-4 rounded-2xl border border-white/5 shadow-sm">
+                            <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Watak Anda</span>
+                            <p id="detail-hari" class="text-xs mt-1 text-zinc-200 font-medium leading-relaxed">-</p>
+                        </div>
+                        <div class="bg-zinc-900/60 p-4 rounded-2xl border border-white/5 shadow-sm">
+                            <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Angin Petuah</span>
+                            <p id="detail-angin" class="text-xs mt-1 text-zinc-200 font-medium leading-relaxed">-</p>
+                        </div>
+                    </div>
+                    <div class="bg-zinc-900/60 p-5 rounded-2xl border border-white/5 flex justify-between items-center shadow-lg relative overflow-hidden mb-6">
+                        <div class="absolute right-0 top-0 opacity-10 p-2"><i data-lucide="hash" class="w-12 h-12"></i></div>
+                        <div>
+                            <span class="text-[10px] text-purple-400 uppercase font-bold tracking-widest">Angka Kabegjan</span>
+                            <p id="detail-angka" class="text-2xl font-bold title-font text-white mt-1">-</p>
+                        </div>
+                    </div>
+
+                    <!-- Do's & Don'ts -->
+                    <div class="grid grid-cols-1 gap-4 mb-6">
+                        <div class="bg-emerald-950/20 p-6 rounded-[2rem] border border-emerald-900/30 shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 right-0 p-4 opacity-5"><i data-lucide="check-circle" class="w-12 h-12"></i></div>
+                            <span class="text-emerald-500 font-javanese text-2xl block mb-2">ꦥꦿꦪꦺꦴꦒꦶꦢꦶꦥꦸꦤ꧀ꦭꦩ꧀ꦥꦲꦶ</span>
+                            <h3 class="text-emerald-500 font-bold text-[10px] uppercase mb-3 tracking-widest flex items-center gap-2"><i data-lucide="zap" class="w-3 h-3"></i> Prayogi Dipunlampahi</h3>
+                            <p id="solusi-dos" class="text-[13px] text-zinc-300 leading-relaxed font-light"></p>
+                        </div>
+
+                        <div class="bg-rose-950/20 p-6 rounded-[2rem] border border-rose-900/30 shadow-sm relative overflow-hidden">
+                            <div class="absolute top-0 right-0 p-4 opacity-5"><i data-lucide="alert-octagon" class="w-12 h-12"></i></div>
+                            <span class="text-rose-500 font-javanese text-2xl block mb-2">ꦮꦼꦮꦊꦂ</span>
+                            <h3 class="text-rose-500 font-bold text-[10px] uppercase mb-3 tracking-widest flex items-center gap-2"><i data-lucide="shield-off" class="w-3 h-3"></i> Wewaler (Larangan)</h3>
+                            <p id="solusi-donts" class="text-[13px] text-zinc-300 leading-relaxed font-light"></p>
+                        </div>
+                    </div>
+
+                    <!-- Bedah Energi Hidup -->
+                    <div class="space-y-4 mb-6">
+                        <div class="flex items-center gap-3 px-2">
+                            <div class="h-px flex-1 bg-white/10"></div>
+                            <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-[0.3em]">Bedah Energi Spesifik</span>
+                            <div class="h-px flex-1 bg-white/10"></div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-3">
+                            <div class="bg-zinc-900/60 p-5 rounded-3xl border border-white/5 flex gap-4 items-start shadow-sm">
+                                <div class="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/20"><i data-lucide="briefcase" class="w-5 h-5 text-amber-500"></i></div>
+                                <div><h4 class="text-[10px] text-zinc-400 uppercase font-bold tracking-widest mb-1">Karier & Niaga</h4><p id="solusi-bisnis" class="text-[12px] text-zinc-300 leading-snug font-light">-</p></div>
+                            </div>
+                            <div class="bg-zinc-900/60 p-5 rounded-3xl border border-white/5 flex gap-4 items-start shadow-sm">
+                                <div class="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center shrink-0 border border-rose-500/20"><i data-lucide="heart" class="w-5 h-5 text-rose-500"></i></div>
+                                <div><h4 class="text-[10px] text-zinc-400 uppercase font-bold tracking-widest mb-1">Relasi & Asmara</h4><p id="solusi-sosial" class="text-[12px] text-zinc-300 leading-snug font-light">-</p></div>
+                            </div>
+                            <div class="bg-zinc-900/60 p-5 rounded-3xl border border-white/5 flex gap-4 items-start shadow-sm">
+                                <div class="w-10 h-10 rounded-2xl bg-cyan-500/10 flex items-center justify-center shrink-0 border border-cyan-500/20"><i data-lucide="activity" class="w-5 h-5 text-cyan-500"></i></div>
+                                <div><h4 class="text-[10px] text-zinc-400 uppercase font-bold tracking-widest mb-1">Kesehatan & Batin</h4><p id="solusi-kesehatan" class="text-[12px] text-zinc-300 leading-snug font-light">-</p></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="switchTab('tab-navigasi')" class="w-full bg-zinc-800 py-4 rounded-[1.5rem] text-sm font-bold border border-white/5 active:bg-zinc-700 shadow-xl flex items-center justify-center gap-2">
+                        Buka Kompas Energi <i data-lucide="navigation" class="w-4 h-4 text-emerald-400"></i>
+                    </button>
+                </div>
+
+                <!-- HASIL JODOH -->
+                <div id="result-jodoh-section" class="hidden opacity-0 transition-opacity duration-500">
+                    <div class="bg-zinc-900/60 p-6 rounded-[3rem] border border-white/5 text-center shadow-xl mb-6">
+                        <div id="jodoh-status-name" class="text-5xl font-bold title-font">-</div>
+                        <div id="jodoh-status-desc" class="text-[10px] font-bold uppercase mt-3 opacity-80 tracking-[0.3em]">-</div>
+                    </div>
+                    <div class="bg-zinc-900/40 p-6 rounded-3xl border border-white/5 shadow-sm mb-6">
+                        <p id="jodoh-detail-desc" class="text-[13px] leading-relaxed text-zinc-300 font-light">-</p>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-rose-950/10 p-6 rounded-[2rem] border border-rose-900/20">
+                            <h4 class="text-[10px] text-rose-500 font-bold uppercase mb-2 flex items-center gap-2"><i data-lucide="shield-off" class="w-3.5 h-3.5"></i> Wewaler Pasangan</h4>
+                            <p id="jodoh-wewaler" class="text-[13px] text-zinc-400 leading-relaxed font-light">-</p>
+                        </div>
+                        <div class="bg-emerald-950/10 p-6 rounded-[2rem] border border-emerald-900/20">
+                            <h4 class="text-[10px] text-emerald-500 font-bold uppercase mb-2 flex items-center gap-2"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sarana Solusi</h4>
+                            <p id="jodoh-solusi" class="text-[13px] text-zinc-400 leading-relaxed font-light">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: NAVIGASI (Kompas & Satelit Gabungan) -->
+            <div id="tab-navigasi" class="p-5 hidden animate-pop">
+                <!-- Header Navigasi -->
+                <div class="mb-8 flex justify-between items-center px-1">
+                    <div>
+                        <h2 class="text-2xl font-bold title-font tracking-tight">Navigasi Alam</h2>
+                        <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-[0.2em]">Kompas Energi & Satelit</p>
+                    </div>
+                    <button onclick="fetchPantauanAlam()" class="w-12 h-12 bg-zinc-800 rounded-[1.2rem] flex items-center justify-center active:rotate-180 transition-all duration-700 shadow-xl border border-white/5"><i data-lucide="refresh-ccw" id="btn-refresh-alam" class="w-5 h-5 text-amber-500"></i></button>
+                </div>
+
+                <!-- Bagian Kompas Mistik -->
+                <div id="kompas-locked" class="h-[40vh] flex flex-col items-center justify-center opacity-30 text-center px-10 border border-dashed border-white/10 rounded-[2.5rem] mb-10">
+                    <i data-lucide="compass" class="w-16 h-16 mb-4"></i>
+                    <p class="text-sm font-medium leading-relaxed">Arah energi belum terdeteksi. Hubungkan data kelahiran di menu Pitedah.</p>
+                </div>
+                
+                <div id="kompas-unlocked" class="hidden flex-col items-center mb-10">
+                    <div class="w-full bg-zinc-900/60 p-4 rounded-3xl mb-8 flex justify-between items-center border border-white/5 shadow-lg">
+                        <div class="flex flex-col">
+                            <span id="physical-heading-text" class="text-3xl font-bold title-font text-white leading-none">0°</span>
+                            <span id="compass-location-text" class="text-[10px] text-zinc-500 mt-1 uppercase font-bold tracking-tighter">Lokasi Satelit...</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="initPhysicalCompass()" id="btn-activate-sensor" class="w-12 h-12 bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-400 transition-all shadow-lg active:scale-95"><i data-lucide="satellite" class="w-5 h-5"></i></button>
+                            <button onclick="openMapModal()" class="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-2xl flex items-center justify-center border border-amber-500/20 active:scale-90 shadow-lg"><i data-lucide="map" class="w-5 h-5"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="relative w-[310px] h-[310px] rounded-full bg-zinc-950 border-[10px] border-zinc-900 shadow-[0_0_80px_rgba(0,0,0,1)] flex items-center justify-center overflow-hidden mb-10">
+                        <div class="absolute top-0 w-1.5 h-6 bg-rose-500 z-40 rounded-full shadow-[0_0_15px_rgba(244,63,94,0.6)]"></div>
+                        <div id="compass-dial" class="absolute inset-0 rounded-full compass-dial-transition w-full h-full flex items-center justify-center">
+                            <div class="absolute inset-3 rounded-full compass-ticks opacity-40"></div>
+                            <div class="absolute inset-3 rounded-full compass-ticks-major opacity-60"></div>
+                            <div class="absolute top-7 font-bold text-amber-500 text-sm">U</div>
+                            <div class="absolute bottom-7 font-bold text-zinc-500 text-sm">S</div>
+                            <div class="absolute right-7 font-bold text-zinc-500 text-sm">T</div>
+                            <div class="absolute left-7 font-bold text-zinc-500 text-sm">B</div>
+                            
+                            <div id="compass-rezeki" class="absolute top-1/2 left-1/2 w-0.5 h-[48%] origin-bottom compass-arrow opacity-0 text-emerald-400" style="margin-top:-48%"><div class="w-3 h-3 rounded-full bg-emerald-400 mx-auto mb-1 shadow-[0_0_15px_#10b981]"></div><div class="w-px h-full bg-gradient-to-t from-transparent via-emerald-500/40 to-emerald-500/60 mx-auto"></div></div>
+                            <div id="compass-naga" class="absolute top-1/2 left-1/2 w-0.5 h-[48%] origin-bottom compass-arrow opacity-0 text-rose-500" style="margin-top:-48%"><div class="w-3 h-3 rounded-full bg-rose-500 mx-auto mb-1 shadow-[0_0_15px_#f43f5e]"></div><div class="w-px h-full bg-gradient-to-t from-transparent via-rose-500/40 to-rose-500/60 mx-auto"></div></div>
+                            <div id="compass-angin" class="absolute top-1/2 left-1/2 w-0.5 h-[48%] origin-bottom compass-arrow opacity-0 text-cyan-400" style="margin-top:-48%"><div class="w-3 h-3 rounded-full bg-cyan-400 mx-auto mb-1 shadow-[0_0_15px_#22d3ee]"></div><div class="w-px h-full bg-gradient-to-t from-transparent via-cyan-500/40 to-cyan-500/60 mx-auto"></div></div>
+                        </div>
+                        <div class="w-7 h-7 bg-zinc-800 rounded-full border-4 border-zinc-900 z-50 shadow-2xl flex items-center justify-center"><div class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></div></div>
+                    </div>
+
+                    <div class="w-full space-y-4">
+                        <div class="bg-zinc-900/80 p-5 rounded-[2rem] border border-emerald-500/20 shadow-xl relative overflow-hidden">
+                            <div class="absolute -right-4 -top-4 opacity-5 font-javanese text-4xl text-emerald-500">ꦩꦂꦒꦫꦺꦗꦺꦏꦶ</div>
+                            <div class="flex justify-between items-start mb-3 relative z-10">
+                                <div><span class="text-emerald-500 font-javanese text-xl block leading-none">ꦩꦂꦒꦫꦺꦗꦺꦏꦶ</span><h4 class="text-[10px] text-emerald-500/80 uppercase font-bold tracking-[0.2em]">Marga Rejeki</h4></div>
+                                <span id="legend-rezeki" class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1 rounded-full font-bold border border-emerald-500/20">-</span>
+                            </div>
+                            <p id="desc-rezeki" class="text-xs text-zinc-300 leading-relaxed font-light mb-3">-</p>
+                            <div class="bg-black/40 p-3 rounded-xl border border-white/5 space-y-2">
+                                <div class="flex items-start gap-2"><i data-lucide="briefcase" class="w-3 h-3 text-emerald-500 mt-0.5"></i><p id="solusi-kerja-rezeki" class="text-[10px] text-zinc-400 font-medium italic">-</p></div>
+                                <div class="flex items-start gap-2"><i data-lucide="footprints" class="w-3 h-3 text-emerald-500 mt-0.5"></i><p id="langkah-rezeki" class="text-[10px] text-zinc-400 font-medium italic">-</p></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-zinc-900/80 p-5 rounded-[2rem] border border-rose-500/20 shadow-xl relative overflow-hidden">
+                            <div class="absolute -right-4 -top-4 opacity-5 font-javanese text-4xl text-rose-500">ꦱꦼꦁꦏꦭꦢꦶꦫꦶ</div>
+                            <div class="flex justify-between items-start mb-3 relative z-10">
+                                <div><span class="text-rose-500 font-javanese text-xl block leading-none">ꦱꦼꦁꦏꦭꦢꦶꦫꦶ</span><h4 class="text-[10px] text-rose-500/80 uppercase font-bold tracking-[0.2em]">Sengkala Diri</h4></div>
+                                <span id="legend-naga" class="bg-rose-500/10 text-rose-400 text-xs px-3 py-1 rounded-full font-bold border border-rose-500/20">-</span>
+                            </div>
+                            <p id="desc-naga" class="text-xs text-zinc-300 leading-relaxed font-light mb-3">-</p>
+                            <div class="bg-black/40 p-3 rounded-xl border border-white/5 space-y-2">
+                                <div class="flex items-start gap-2 text-rose-400/80"><i data-lucide="alert-circle" class="w-3 h-3 mt-0.5"></i><p id="solusi-kerja-naga" class="text-[10px] font-medium italic">-</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bagian Satelit Alam -->
+                <div class="flex items-center gap-3 px-2 mt-4 mb-8">
+                    <div class="h-px flex-1 bg-white/10"></div>
+                    <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-[0.3em] flex items-center gap-1.5"><i data-lucide="satellite" class="w-3 h-3 text-zinc-500"></i> Radar Alam Terkini</span>
+                    <div class="h-px flex-1 bg-white/10"></div>
+                </div>
+
+                <div class="bg-gradient-to-br from-zinc-900 to-rose-950/40 p-7 rounded-[2.5rem] mb-5 border border-rose-900/30 relative overflow-hidden shadow-2xl">
+                    <div class="absolute -top-4 -right-4 opacity-5"><i data-lucide="activity" class="w-32 h-32"></i></div>
+                    <h3 class="text-[10px] text-rose-500 font-bold uppercase mb-4 tracking-widest">Gempa Terkini (BMKG)</h3>
+                    <div id="bmkg-loading" class="text-xs italic opacity-40 py-6">Sinkronisasi Server BMKG...</div>
+                    <div id="bmkg-content" class="hidden">
+                        <div class="flex items-baseline gap-2"><div class="text-6xl font-bold title-font text-white" id="bmkg-mag">-</div><span class="text-xs font-bold text-rose-500 uppercase tracking-widest mb-2">Magnitude</span></div>
+                        <p id="bmkg-wilayah" class="text-sm font-medium text-zinc-200 mt-4 leading-snug">-</p>
+                        <div class="flex gap-3 mt-6">
+                            <span class="bg-black/60 px-4 py-2 rounded-xl text-[10px] font-bold text-zinc-400 border border-white/5 flex-1 text-center uppercase">DALAM: <b id="bmkg-kedalaman" class="text-white ml-1">-</b></span>
+                            <span class="bg-black/60 px-4 py-2 rounded-xl text-[10px] font-bold text-rose-400 border border-white/5 flex-1 text-center uppercase">TSUNAMI: <b id="bmkg-potensi" class="ml-1">-</b></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bencana-content" class="space-y-3 mb-6 px-1"></div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-zinc-900/80 p-5 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden">
+                        <div class="absolute right-0 top-0 p-3 opacity-10"><i data-lucide="wind" class="w-10 h-10 text-cyan-400"></i></div>
+                        <span class="text-[9px] text-cyan-500 font-bold uppercase tracking-widest block mb-2">Angin</span>
+                        <div class="text-2xl font-bold text-white tracking-tight"><span id="angin-speed">-</span> <small class="text-[10px] text-zinc-500 font-bold">km/h</small></div>
+                    </div>
+                    
+                    <div class="bg-zinc-900/80 p-5 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden">
+                        <div class="absolute right-0 top-0 p-3 opacity-10"><i data-lucide="thermometer" class="w-10 h-10 text-orange-400"></i></div>
+                        <span class="text-[9px] text-orange-500 font-bold uppercase tracking-widest block mb-2">Suhu Luar</span>
+                        <div class="text-2xl font-bold text-white tracking-tight"><span id="atmos-temp">-</span> <small class="text-[10px] text-zinc-500 font-bold">°C</small></div>
+                    </div>
+
+                    <div class="bg-zinc-900/80 p-5 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden">
+                        <div class="absolute right-0 top-0 p-3 opacity-10"><i data-lucide="mountain" class="w-10 h-10 text-emerald-400"></i></div>
+                        <span class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest block mb-2">Ketinggian</span>
+                        <div class="text-2xl font-bold text-white tracking-tight"><span id="alt-meter">-</span> <small class="text-[10px] text-zinc-500 font-bold">mdpl</small></div>
+                    </div>
+
+                    <div class="bg-zinc-900/80 p-5 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden">
+                        <div class="absolute right-0 top-0 p-3 opacity-10"><i data-lucide="gauge" class="w-10 h-10 text-blue-400"></i></div>
+                        <span class="text-[9px] text-blue-500 font-bold uppercase tracking-widest block mb-2">Barometer</span>
+                        <div class="text-2xl font-bold text-white tracking-tight"><span id="alt-pressure">-</span> <small class="text-[10px] text-zinc-500 font-bold">hPa</small></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: WASKITHA -->
+            <div id="tab-waskitha" class="p-5 hidden animate-pop">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold title-font tracking-tight">Waskitha</h2>
+                    <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Sinkronisasi Roda Waktu Mikro & Makro</p>
+                </div>
+
+                <div class="bg-zinc-900/60 p-8 rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden mb-6 flex flex-col items-center text-center">
+                    <div id="waskitha-glow" class="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl animate-pulse opacity-30"></div>
+
+                    <div class="relative w-28 h-28 mb-6">
+                        <div id="waskitha-spinner" class="absolute inset-0 border-[4px] border-dashed rounded-full animate-[spin_10s_linear_infinite]"></div>
+                        <div class="absolute inset-2 border-[2px] border-white/10 rounded-full"></div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <i id="waskitha-icon" data-lucide="aperture" class="w-10 h-10"></i>
+                        </div>
+                    </div>
+
+                    <span id="waskitha-phase-name" class="text-xs font-bold uppercase tracking-[0.3em] mb-2">-</span>
+                    <h3 id="waskitha-title" class="text-4xl title-font font-bold mb-4">-</h3>
+                    <p id="waskitha-desc" class="text-[13px] text-zinc-300 leading-relaxed font-light">-</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-zinc-900/80 p-5 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden">
+                        <div class="absolute right-0 top-0 p-3 opacity-10"><i data-lucide="clock" class="w-10 h-10 text-white"></i></div>
+                        <span class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest block mb-2">Cakra Waktu</span>
+                        <div id="waskitha-time" class="text-xl font-bold text-white tracking-tight">-</div>
+                    </div>
+                    <div class="bg-zinc-900/80 p-5 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden">
+                        <div class="absolute right-0 top-0 p-3 opacity-10"><i id="waskitha-element-icon" data-lucide="compass" class="w-10 h-10 text-white"></i></div>
+                        <span class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest block mb-2">Arah & Elemen</span>
+                        <div id="waskitha-direction" class="text-xl font-bold text-white tracking-tight">-</div>
+                    </div>
+                    <div class="bg-zinc-900/80 p-5 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden">
+                        <div class="absolute right-0 top-0 p-3 opacity-10"><i data-lucide="target" class="w-10 h-10 text-white"></i></div>
+                        <span class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest block mb-2">Cakra Tubuh Aktif</span>
+                        <div id="waskitha-chakra" class="text-[13px] font-bold text-white leading-tight mt-1">-</div>
+                    </div>
+                    <div class="bg-zinc-900/80 p-5 rounded-[2rem] border border-white/5 shadow-xl relative overflow-hidden flex flex-col justify-center">
+                        <div class="absolute right-0 top-0 p-3 opacity-5"><i data-lucide="sparkles" class="w-10 h-10 text-white"></i></div>
+                        <span class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest block mb-2">Afirmasi Batin</span>
+                        <p id="waskitha-afirmasi" class="text-[10px] text-amber-400 font-medium italic leading-snug">"-"</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="bg-emerald-950/20 p-6 rounded-[2rem] border border-emerald-900/30 shadow-xl relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 opacity-5 font-javanese text-4xl text-emerald-500">ꦮꦱ꧀ꦏꦶꦛ</div>
+                        <span class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest block mb-2 flex items-center gap-2"><i data-lucide="check-circle-2" class="w-3 h-3"></i> Tindakan Selaras Jam Ini</span>
+                        <p id="waskitha-action" class="text-[12px] text-zinc-300 leading-relaxed font-light">-</p>
+                    </div>
+                    <div class="bg-rose-950/20 p-6 rounded-[2rem] border border-rose-900/30 shadow-xl relative overflow-hidden">
+                        <span class="text-[9px] text-rose-500 font-bold uppercase tracking-widest block mb-2 flex items-center gap-2"><i data-lucide="shield-off" class="w-3 h-3"></i> Wewaler (Pantangan) Jam Ini</span>
+                        <p id="waskitha-pantangan" class="text-[12px] text-zinc-300 leading-relaxed font-light">-</p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Navigation (4 Items Compact) -->
+        <nav class="fixed bottom-0 w-full max-w-[430px] px-5 pb-8 z-50 pointer-events-none">
+            <div class="bg-zinc-900/90 backdrop-blur-2xl border border-white/10 rounded-full flex justify-around items-center h-18 py-1.5 px-2 pointer-events-auto shadow-[0_30px_60px_rgba(0,0,0,0.9)] overflow-hidden">
+                <button onclick="switchTab('tab-beranda')" class="nav-item active flex flex-col items-center flex-1" id="nav-tab-beranda"><div class="icon-box"><i data-lucide="home" class="w-5 h-5 mb-0.5"></i></div><span class="text-[8px] uppercase font-bold tracking-tighter mt-1">Beranda</span></button>
+                <button onclick="switchTab('tab-pitedah')" class="nav-item flex flex-col items-center flex-1" id="nav-tab-pitedah"><div class="icon-box"><i data-lucide="book-open" class="w-5 h-5 mb-0.5"></i></div><span class="text-[8px] uppercase font-bold tracking-tighter mt-1">Pitedah</span></button>
+                <button onclick="switchTab('tab-navigasi')" class="nav-item flex flex-col items-center flex-1" id="nav-tab-navigasi"><div class="icon-box"><i data-lucide="compass" class="w-5 h-5 mb-0.5"></i></div><span class="text-[8px] uppercase font-bold tracking-tighter mt-1">Navigasi</span></button>
+                <button onclick="switchTab('tab-waskitha')" class="nav-item flex flex-col items-center flex-1" id="nav-tab-waskitha"><div class="icon-box"><i data-lucide="aperture" class="w-5 h-5 mb-0.5"></i></div><span class="text-[8px] uppercase font-bold tracking-tighter mt-1 text-amber-500">Waskitha</span></button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Modals -->
+    <div id="sensor-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md hidden opacity-0 transition-all duration-300">
+        <div class="bg-zinc-900 p-8 rounded-[3rem] max-w-[320px] w-full text-center mx-4 border border-white/10 shadow-2xl">
+            <div class="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-500/20"><i data-lucide="alert-circle" class="w-8 h-8 text-rose-500"></i></div>
+            <h3 class="font-bold text-lg mb-2" id="modal-title"></h3>
+            <p class="text-xs text-zinc-400 mb-8 leading-relaxed font-light" id="modal-desc"></p>
+            <button onclick="closeSensorModal()" class="w-full bg-white text-black py-4 rounded-2xl font-bold text-sm shadow-xl active:scale-95 transition-all">Tutup</button>
+        </div>
+    </div>
+
+    <div id="map-modal" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/85 backdrop-blur-md hidden opacity-0 transition-all duration-300">
+        <div class="bg-zinc-900 border border-white/10 p-6 rounded-[3rem] max-w-[400px] w-[92%] flex flex-col gap-5 mx-4 shadow-2xl">
+            <div class="flex justify-between items-center px-2"><h3 class="font-bold text-xs uppercase tracking-widest text-zinc-500">Lokasi Satelit</h3><button onclick="closeMapModal()" class="bg-zinc-800 p-2 rounded-full active:scale-90 transition-all"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+            <div class="relative"><input type="text" id="map-search-input" placeholder="Ketik alamat atau kota..." class="w-full p-4 bg-black border border-white/5 rounded-2xl text-xs text-white outline-none focus:border-amber-500 shadow-inner" onkeypress="if(event.key === 'Enter') searchMapLocation()"><i data-lucide="search" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500"></i></div>
+            <div id="map-container" class="w-full h-[300px] rounded-[1.5rem] border border-white/5 relative z-10 shadow-inner bg-zinc-950"></div>
+            <button onclick="confirmManualLocation()" class="w-full bg-emerald-500 text-black py-4 rounded-2xl font-bold text-sm shadow-xl active:scale-95 transition-all">Gunakan Lokasi Ini</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const setGreeting = () => { const h = new Date().getHours(); let g = 'Sugeng Dalu'; if(h>=4 && h<10) g='Sugeng Enjing'; else if(h>=10 && h<15) g='Sugeng Siang'; else if(h>=15 && h<18) g='Sugeng Sonten'; document.getElementById('greeting-text').textContent = `Rahayu, ${g}`; };
+        setGreeting();
+
+        const hArr = ['Ahad','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'], pArr = ['Wage','Kliwon','Legi','Pahing','Pon'], nH = {'Ahad':5,'Senin':4,'Selasa':3,'Rabu':7,'Kamis':8,'Jumat':6,'Sabtu':9}, nP = {'Legi':5,'Pahing':9,'Pon':7,'Wage':4,'Kliwon':8};
+        
+        const wD = {'Ahad':'Netral, awal perputaran energi semesta. Sangat baik menetapkan niat baru.','Senin':'Dinamis, utamakan pergerakan cepat. Baik untuk memulai sesuatu yang butuh energi tinggi.','Selasa':'Keras dan tegas, waspada luapan emosi berlebih. Tetaplah tenang dalam berkomunikasi.','Rabu':'Harmonis, sangat baik untuk menjalin janji temu, negosiasi, atau kesepakatan sosial.','Kamis':'Wibawa tinggi, hari yang sangat bagus untuk urusan karier, jabatan, dan kehormatan.','Jumat':'Suci dan tenang, luangkan waktu untuk doa, ibadah, dan membersihkan lingkungan sekitar.','Sabtu':'Energi berat dan stabil, membutuhkan ketekunan ekstra untuk hasil yang maksimal.'};
+        
+        const aRezeki = {'Legi':'Timur','Pahing':'Selatan','Pon':'Barat','Wage':'Utara','Kliwon':'Tengah (Pusat)'}, 
+              nDino = {'Ahad':'Timur','Senin':'Timur','Selasa':'Selatan','Rabu':'Selatan','Kamis':'Barat','Jumat':'Barat','Sabtu':'Utara'};
+        
+        const aAnginMap = {1:'Timur',2:'Selatan',3:'Barat',4:'Utara',0:'Pusat'}, 
+              aDeg = {'Utara':0,'Timur':90,'Selatan':180,'Barat':270,'Pusat':null};
+
+        const pKalang = {
+            1: {nama:'SRI', arti:'Kemakmuran & Kesuburan', warna:'text-emerald-400', dos:'Mulailah langkah baru, lakukan transaksi besar, tanam benih, atau buat komitmen karier.', donts:'Jangan menyimpan keraguan atau bersikap kikir. Energi ini membutuhkan aliran kedermawanan.', bisnis: 'Peluang transaksi berhasil sangat tinggi. Cocok untuk ekspansi pasar atau promo besar.', sosial: 'Hubungan dengan rekan kerja sedang sangat cair. Baik untuk rekonsiliasi.', kesehatan: 'Vitalitas tubuh meningkat. Fokus pada nutrisi bergizi untuk menjaga momentum.'},
+            2: {nama:'LUNGGUH', arti:'Pangkat & Derajat', warna:'text-blue-400', dos:'Sangat tepat menemui atasan, tokoh penting, atau mengurus promosi jabatan dan administrasi penting.', donts:'Hindari bersikap sombong atau meremehkan orang lain karena wibawa anda sedang diperhatikan.', bisnis: 'Waktunya melakukan presentasi atau pitching. Karisma kepemimpinan anda sangat kuat.', sosial: 'Anda akan menjadi pusat perhatian. Jaga integritas dan ucapan di depan publik.', kesehatan: 'Postur dan pernapasan harus diperhatikan. Hindari begadang berlebihan.'},
+            3: {nama:'GEDHONG', arti:'Harta & Kekayaan', warna:'text-amber-400', dos:'Gunakan hari ini untuk menabung, investasi, berdagang, atau membeli aset berharga lainnya.', donts:'Jangan membuang uang untuk hal yang tidak produktif (boros) atau memberi pinjaman tanpa jaminan.', bisnis: 'Arus kas (cashflow) lancar. Waktu yang tepat untuk menagih hutang atau audit finansial.', sosial: 'Energi keberuntungan menular. Sangat baik untuk acara keluarga yang akrab.', kesehatan: 'Kondisi fisik stabil. Baik untuk memulai perawatan kulit atau kenyamanan rumah.'},
+            4: {nama:'LORO', arti:'Halangan & Penyakit', warna:'text-orange-400', dos:'Fokuskan hari ini untuk istirahat total, meditasi (healing), dan pengecekan kesehatan rutin.', donts:'Hindari perjalanan jauh, aktivitas fisik ekstrem, atau memaksakan target pekerjaan berat.', bisnis: 'Tunda keputusan strategis. Fokus pada perbaikan sistem internal yang rapuh.', sosial: 'Risiko salah paham tinggi. Lebih baik banyak mendengar daripada berbicara berlebihan.', kesehatan: 'Imun sedang menurun. Perbanyak air putih, vitamin, dan tidur lebih awal.'},
+            0: {nama:'PATI', arti:'Naas Besar / Pembersihan', warna:'text-rose-500', dos:'Lakukan sedekah tolak bala, tirakat (puasa), doa khusus, dan introspeksi diri secara mendalam.', donts:'DILARANG KERAS memulai hajat besar, pernikahan, pindah rumah, atau bepergian ke luar kota.', bisnis: 'Bahaya kerugian mengintai. Pertahankan aset yang ada, jangan ambil resiko spekulasi.', sosial: 'Energi negatif mudah tersulut. Hindari debat kusir dan keramaian yang tidak perlu.', kesehatan: 'Waspada kecelakaan kecil atau cedera mendadak. Tetaplah mawas diri (eling).'}
+        };
+
+        const detailKompasMap = {
+            'Timur': {rezeki: "Emanasi elemen Kayu sedang menguat. Cahaya fajar membawa berkah bagi niat yang tulus.", kerja: "Sangat baik untuk pemasaran, promosi, dan kontrak kerja baru.", langkah: "Awali kaki kanan, langkah 3 kali sambil tahan napas.", naga: "Waspada perselisihan verbal."},
+            'Selatan': {rezeki: "Elemen Api memberi daya pikat. Energi keberuntungan pada puncak eksposure.", kerja: "Cocok untuk seni, kepemimpinan, dan diplomasi tingkat tinggi.", langkah: "Kaki kanan, langkah lebar dan tatapan lurus ke depan.", naga: "Waspada teguran atasan/hukum."},
+            'Barat': {rezeki: "Elemen Logam membawa kestabilan. Saatnya menuai apa yang telah ditanam.", kerja: "Unggul untuk urusan keuangan, investasi, dan kelola aset.", langkah: "Kaki kiri, langkah perlahan namun pasti.", naga: "Waspada kerugian material."},
+            'Utara': {rezeki: "Elemen Air memberi kejernihan. Rezeki mengalir dalam ketenangan.", kerja: "Sangat baik untuk riset, pendidikan, dan perencanaan rahasia.", langkah: "Kaki kiri, langkah ringan seolah menyeberang air suci.", naga: "Waspada pengkhianatan."},
+            'Tengah (Pusat)': {rezeki: "Pusat keseimbangan. Rezeki datang dari ketenangan batin sendiri.", kerja: "Konsolidasi tim, renovasi rumah, atau meditasi karier.", langkah: "Berdiri tegak menghadap matahari, tarik napas 3 kali.", naga: "Waspada hilang fokus."}
+        };
+
+        const tJodoh = {
+            1: {nama:'PEGAT', arti:'Potensi Pisah', warna:'text-rose-500', desc:'Rawan menghadapi masalah ekonomi berat atau kehadiran pihak ketiga.', wewaler:'Dilarang menyimpan rahasia pribadi.', solusi:'Ritual Ruatan Sengkolo bersama.'},
+            2: {nama:'RATU', arti:'Sangat Harmonis', warna:'text-emerald-400', desc:'Pasangan disegani, kehidupan rumah tangga akan penuh keberkahan.', wewaler:'Hindari sifat angkuh.', solusi:'Rutinkan tasyakuran kecil sebagai syukur.'},
+            3: {nama:'JODHO', arti:'Serasi & Cocok', warna:'text-blue-400', desc:'Saling menerima kekurangan, rukun hingga masa tua.', wewaler:'Jaga komunikasi harian.', solusi:'Luangkan waktu berkualitas setiap pekan.'},
+            4: {nama:'TOPO', arti:'Ujian Awal', warna:'text-amber-400', desc:'Awal terasa berat secara ekonomi, namun berakhir sukses besar.', wewaler:'Jangan mudah mengeluh.', solusi:'Manajemen keuangan yang sangat ketat.'},
+            5: {nama:'TINARI', arti:'Luber Rezeki', warna:'text-emerald-500', desc:'Kemudahan mencari rezeki dan sering mendapat keberuntungan.', wewaler:'Jangan boros harta.', solusi:'Perbanyak zakat dan infak.'},
+            6: {nama:'PADU', arti:'Sering Cekcok', warna:'text-orange-400', desc:'Sering bertengkar sepele, namun sulit berpisah.', wewaler:'Jangan adu ego.', solusi:'Sediakan ruang tenang untuk diskusi.'},
+            7: {nama:'SUJANAN', arti:'Rawan Cemburu', warna:'text-rose-600', desc:'Sangat rawan perselingkuhan atau rasa curiga berlebihan.', wewaler:'Transparansi akses gadget.', solusi:'Keterbukaan total tanpa rahasia.'},
+            8: {nama:'PESTHI', arti:'Tenteram & Damai', warna:'text-cyan-400', desc:'Kehidupan damai sejahtera tanpa banyak gejolak.', wewaler:'Jangan terlalu santai.', solusi:'Tetap bermusyawarah dalam keputusan.'}
+        };
+
+        const waskithaPhases = [
+            { start: 5, end: 10, name: "Fase Fajar", title: "Cakra Purwa", icon: "sunrise", elementIcon: "tree-pine", color: "text-emerald-400", border: "border-emerald-500", dir: "Timur (Kayu)", chakra: "Muladhara (Cakra Akar)", desc: "Energi alam sedang bertumbuh dari bawah. Ini adalah waktu transisi dari alam mimpi ke alam nyata, membutuhkan fondasi (akar) yang kuat.", action: "Mulai hari dengan perencanaan matang. Eksekusi ide baru dan arahkan niat Anda ke Timur untuk menyerap keberuntungan energi fajar yang segar.", pantangan: "Sangat pantang untuk kembali tidur (tidur pagi) atau bermalas-malasan, karena akan mematikan energi pertumbuhan Kayu hari ini.", afirmasi: "Niat ingsun miwiti karya, rineksa ing pepadhang. (Niatku memulai karya, dijaga oleh cahaya terang)." },
+            { start: 10, end: 15, name: "Fase Siang", title: "Cakra Madya", icon: "sun", elementIcon: "flame", color: "text-rose-500", border: "border-rose-500", dir: "Selatan (Api)", chakra: "Manipura (Cakra Perut)", desc: "Energi memuncak dan berkobar hebat. Karisma, emosi, dan eksposur sosial Anda berada di titik tertinggi di bawah pancaran elemen Api.", action: "Waktu emas untuk memimpin, negosiasi, presentasi, dan unjuk gigi. Arahkan fokus kerja keras Anda ke Selatan untuk memperkuat wibawa.", pantangan: "Dilarang keras mengambil keputusan krusial saat emosi sedang memuncak. Hindari berdebat keras karena amarah mudah tersulut.", afirmasi: "Mubyar teja ing dada, makantar ing karsa. (Bercahaya aura di dada, berkobar dalam kehendak)." },
+            { start: 15, end: 18, name: "Fase Sore", title: "Cakra Wusana", icon: "sunset", elementIcon: "hexagon", color: "text-amber-400", border: "border-amber-500", dir: "Barat (Logam)", chakra: "Anahata (Cakra Jantung)", desc: "Matahari condong, energi memadat. Ini adalah masa pengumpulan, stabilisasi, dan penyelesaian siklus siang yang beralih ke rasa syukur.", action: "Fokus pada evaluasi hasil kerja, penyelesaian transaksi finansial, dan penagihan hak. Berpalinglah ke Barat untuk memanen apa yang telah ditanam.", pantangan: "Jangan memulai proyek atau pekerjaan baru pada fase ini. Pantang menunda pekerjaan harian yang hampir selesai.", afirmasi: "Ayem tentrem ing kalbu, ngundhuh wohing pakarti. (Damai tenteram di hati, memanen buah dari perbuatan)." },
+            { start: 18, end: 23, name: "Fase Petang", title: "Cakra Surup", icon: "moon", elementIcon: "droplets", color: "text-blue-400", border: "border-blue-500", dir: "Utara (Air)", chakra: "Ajna (Cakra Mata Ketiga)", desc: "Energi mengalir tenang menuju keheningan. Waktunya kembali ke asal, berkumpul dengan keluarga, dan mempertajam kejernihan batin (intuisi).", action: "Kurangi aktivitas fisik. Perkuat ikatan keluarga dan lakukan perencanaan rahasia (internal). Utara menjadi arah perlindungan yang paling baik saat ini.", pantangan: "Berhentilah memikirkan urusan duniawi, target perusahaan, atau tekanan pekerjaan agar energi Air tidak menjadi keruh.", afirmasi: "Heninging cipta, weninging rasa. (Heningnya cipta/pikiran, beningnya perasaan)." },
+            { start: 23, end: 5, name: "Fase Dini Hari", title: "Cakra Suwung", icon: "moon-star", elementIcon: "mountain", color: "text-purple-400", border: "border-purple-500", dir: "Pusat (Tanah)", chakra: "Sahasrara (Cakra Mahkota)", desc: "Energi menyatu erat dengan spiritualitas. Gerbang kosmik terbuka lebar tanpa hijab, menghubungkan mikrokosmos tubuh ke makrokosmos Ilahi.", action: "Lakukan meditasi suwung, salat malam, tirakat, atau istirahat total (tidur) untuk memulihkan raga menuju poros (pusat energi).", pantangan: "Aktivitas fisik berat, makan berlebihan, atau keluyuran malam sangat merusak keseimbangan cakra mahkota yang sedang me-reset tubuh.", afirmasi: "Manunggal kawula gusti, suwung nanging isi. (Bersatunya hamba dan pencipta, kosong namun sejatinya terisi penuh)." }
+        ];
+
+        let isCalculated = false, globalDegRezeki = null, globalDegNaga = null, globalDegAngin = null, isSensorActive = false, hasFetchedAlam = false, calcMode = 'harian', currentLat = -6.2, currentLon = 106.81, leafMap = null, leafMarker = null;
+
+        function setCalcMode(m) {
+            calcMode = m;
+            document.getElementById('btn-mode-harian').className = m==='harian'?'flex-1 py-3 rounded-xl bg-amber-500 text-zinc-950 font-bold text-xs shadow-md transition-all':'flex-1 py-3 rounded-xl text-zinc-500 font-bold text-xs transition-all';
+            document.getElementById('btn-mode-jodoh').className = m==='jodoh'?'flex-1 py-3 rounded-xl bg-rose-500 text-white font-bold text-xs shadow-md transition-all':'flex-1 py-3 rounded-xl text-zinc-500 font-bold text-xs transition-all';
+            document.getElementById('input-partner-container').classList.toggle('hidden', m!=='jodoh');
+            document.getElementById('label-birth-date').textContent = m==='jodoh'?'Tanggal Lahir Anda':'Pilih Tanggal Lahir Anda';
+            document.getElementById('result-section').classList.add('hidden'); 
+            document.getElementById('result-jodoh-section').classList.add('hidden');
+        }
+
+        function switchTab(t) {
+            ['tab-beranda','tab-pitedah','tab-navigasi','tab-waskitha'].forEach(id => { 
+                document.getElementById(id).classList.add('hidden'); 
+                document.getElementById(id).classList.remove('block'); 
+            });
+            document.getElementById(t).classList.remove('hidden'); 
+            setTimeout(() => document.getElementById(t).classList.add('block'), 10);
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); 
+            document.getElementById(`nav-${t}`).classList.add('active');
+            document.getElementById('main-content').scrollTo(0,0);
+            if (t === 'tab-navigasi') {
+                if (isCalculated) renderCompassArrows();
+                if (!hasFetchedAlam) fetchPantauanAlam();
+            }
+            if (t === 'tab-waskitha') updateWaskitha();
+        }
+
+        function getWeton(dObj) {
+            const e = new Date(Date.UTC(1970,0,1)), t = new Date(Date.UTC(dObj.getFullYear(),dObj.getMonth(),dObj.getDate())), diff = Math.floor((t-e)/(864e5));
+            const d = hArr[t.getUTCDay()]; let pI = diff % 5; if(pI < 0) pI = (pI + 5) % 5;
+            const p = pArr[pI]; return {h:d, p:p, n:`${d} ${p}`, nep:nH[d]+nP[p]};
+        }
+
+        function updateClock() {
+            const n = new Date();
+            document.getElementById('current-time').textContent = n.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',hour12:false});
+            const dS = n.toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+            if (document.getElementById('current-date').textContent !== dS) {
+                document.getElementById('current-date').textContent = dS;
+                const cw = getWeton(n);
+                document.getElementById('current-weton').textContent = cw.n;
+                document.getElementById('current-neptu').textContent = `Neptu Harian: ${cw.nep}`;
+                document.getElementById('beranda-watak').textContent = wD[cw.h];
+                document.getElementById('beranda-rezeki').textContent = aRezeki[cw.p];
+                document.getElementById('beranda-naga').textContent = nDino[cw.h];
+                if (isCalculated && calcMode === 'harian') calculateKawruhKalang(true);
+            }
+            updateWaskitha();
+        }
+        setInterval(updateClock, 1000); updateClock();
+
+        function updateWaskitha() {
+            const h = new Date().getHours();
+            let phase = waskithaPhases.find(p => (p.start < p.end) ? (h >= p.start && h < p.end) : (h >= p.start || h < p.end));
+            
+            if(phase) {
+                document.getElementById('waskitha-phase-name').textContent = phase.name;
+                document.getElementById('waskitha-phase-name').className = `text-xs font-bold uppercase tracking-[0.3em] mb-2 ${phase.color}`;
+                document.getElementById('waskitha-title').textContent = phase.title;
+                document.getElementById('waskitha-title').className = `text-4xl title-font font-bold mb-4 ${phase.color}`;
+                document.getElementById('waskitha-desc').textContent = phase.desc;
+                
+                document.getElementById('waskitha-time').textContent = `${String(phase.start).padStart(2, '0')}:00 - ${String(phase.end).padStart(2, '0')}:00`;
+                document.getElementById('waskitha-direction').textContent = phase.dir;
+                document.getElementById('waskitha-chakra').textContent = phase.chakra;
+                document.getElementById('waskitha-afirmasi').textContent = `"${phase.afirmasi}"`;
+                
+                document.getElementById('waskitha-action').textContent = phase.action;
+                document.getElementById('waskitha-pantangan').textContent = phase.pantangan;
+                
+                const icon = document.getElementById('waskitha-icon');
+                icon.setAttribute('data-lucide', phase.icon); icon.className = `w-10 h-10 ${phase.color}`;
+                
+                const elIcon = document.getElementById('waskitha-element-icon');
+                elIcon.setAttribute('data-lucide', phase.elementIcon);
+                
+                document.getElementById('waskitha-glow').className = `absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl animate-pulse opacity-30 ${phase.color.replace('text-', 'bg-')}`;
+                document.getElementById('waskitha-spinner').className = `absolute inset-0 border-[4px] border-dashed rounded-full animate-[spin_10s_linear_infinite] ${phase.border} opacity-50`;
+                lucide.createIcons();
+            }
+        }
+
+        function calculateKawruhKalang(auto=false) {
+            if (calcMode === 'jodoh') { if(!auto) calculateJodoh(); return; }
+            const bInput = document.getElementById('birth-date').value;
+            if (!bInput) { if(!auto) showModalMsg("Data Kosong","Sila isikan tanggal lahir anda."); return; }
+            
+            const [y,m,d] = bInput.split('-'), uw = getWeton(new Date(y,m-1,d)), cw = getWeton(new Date()), tot = uw.nep + cw.nep, sisa = tot % 5, h = pKalang[sisa];
+            
+            document.getElementById('detail-hari').textContent = wD[cw.h]; 
+            document.getElementById('detail-angin').textContent = `Angin ${aAnginMap[sisa]}`;
+            document.getElementById('detail-angka').textContent = `${tot}-${(uw.nep*cw.nep)%9||9}-${Math.abs(tot-d)%9+1}`;
+            
+            document.getElementById('solusi-status-name').textContent = h.nama;
+            document.getElementById('solusi-status-name').className = `text-6xl title-font font-bold ${h.warna}`;
+            document.getElementById('solusi-status-desc').textContent = h.arti;
+            document.getElementById('solusi-dos').textContent = h.dos; 
+            document.getElementById('solusi-donts').textContent = h.donts;
+            document.getElementById('solusi-bisnis').textContent = h.bisnis; 
+            document.getElementById('solusi-sosial').textContent = h.sosial; 
+            document.getElementById('solusi-kesehatan').textContent = h.kesehatan;
+            
+            const rS = tot % 4; let arah = rS===1?'Timur':rS===2?'Selatan':rS===3?'Barat':'Utara';
+            const nogo = {'Timur':'Barat','Selatan':'Utara','Barat':'Timur','Utara':'Selatan'}[arah];
+            const dR = detailKompasMap[arah], dN = detailKompasMap[nogo];
+            
+            document.getElementById('legend-rezeki').textContent = arah; 
+            document.getElementById('desc-rezeki').textContent = dR.rezeki;
+            document.getElementById('solusi-kerja-rezeki').textContent = `Usaha: ${dR.kerja}`;
+            document.getElementById('langkah-rezeki').textContent = `Langkah: ${dR.langkah}`;
+            
+            document.getElementById('legend-naga').textContent = nogo;
+            document.getElementById('desc-naga').textContent = `Arah Sengkala hari ini membawa getaran ${dN.naga}.`;
+            document.getElementById('solusi-kerja-naga').textContent = `Peringatan: Hindari urusan krusial atau bertransaksi menghadap ke arah ini.`;
+            
+            globalDegRezeki = aDeg[arah]; globalDegNaga = aDeg[nogo]; globalDegAngin = aDeg[aAnginMap[sisa]];
+            isCalculated = true;
+
+            if(!auto) {
+                document.getElementById('kompas-locked').classList.add('hidden'); 
+                document.getElementById('kompas-unlocked').classList.remove('hidden'); 
+                document.getElementById('kompas-unlocked').classList.add('flex');
+                
+                const rs = document.getElementById('result-section'); 
+                rs.classList.remove('hidden'); 
+                setTimeout(()=>rs.classList.add('opacity-100'),50);
+                
+                document.getElementById('main-content').scrollTo({ top: rs.offsetTop - 20, behavior: 'smooth' });
+                lucide.createIcons();
+            } else {
+                if (document.getElementById('tab-navigasi').classList.contains('block')) renderCompassArrows();
+            }
+        }
+
+        function calculateJodoh() {
+            const b = document.getElementById('birth-date').value, p = document.getElementById('partner-date').value;
+            if (!b || !p) { showModalMsg("Data Kosong","Lengkapkan kedua-dua tanggal lahir."); return; }
+            
+            const w1 = getWeton(new Date(b)), w2 = getWeton(new Date(p)), tot = w1.nep + w2.nep; 
+            let s = tot % 8 || 8, h = tJodoh[s];
+            
+            document.getElementById('jodoh-status-name').textContent = h.nama; 
+            document.getElementById('jodoh-status-name').className = `text-5xl font-bold title-font ${h.warna}`;
+            document.getElementById('jodoh-status-desc').textContent = h.arti; 
+            document.getElementById('jodoh-detail-desc').textContent = h.desc;
+            document.getElementById('jodoh-wewaler').textContent = h.wewaler; 
+            document.getElementById('jodoh-solusi').textContent = h.solusi;
+            
+            const rj = document.getElementById('result-jodoh-section'); 
+            rj.classList.remove('hidden'); 
+            setTimeout(()=>rj.classList.add('opacity-100'),50);
+            
+            document.getElementById('main-content').scrollTo({ top: rj.offsetTop - 20, behavior: 'smooth' });
+            lucide.createIcons();
+        }
+
+        async function updateCompassLocationUI(lat, lon, src, city=null) {
+            currentLat = lat; currentLon = lon; const lt = document.getElementById('compass-location-text');
+            if(city) lt.textContent = `${city} (${src})`;
+            else { try { const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`); 
+            const d = await r.json(); lt.textContent = `${d.address.city||d.address.town||d.address.village||'Lokasi'} (${src})`; 
+            } catch(e){ lt.textContent=`${lat.toFixed(2)},${lon.toFixed(2)}`; } }
+        }
+
+        function initPhysicalCompass() {
+            if (typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function') {
+                DeviceOrientationEvent.requestPermission().then(s=>{ if(s==='granted') startListening(); }).catch(e=>showModalMsg("Ralat Penderia","Keizinan penderia ditolak."));
+            } else startListening();
+        }
+
+        function startListening() {
+            window.addEventListener('deviceorientationabsolute', e => {
+                let h = e.webkitCompassHeading || (360-e.alpha);
+                if(h){ document.getElementById('physical-heading-text').textContent = `${Math.round(h)}°`; document.getElementById('compass-dial').style.transform = `rotate(${-h}deg)`; }
+            });
+            fetchLoc(); document.getElementById('btn-activate-sensor').classList.add('bg-amber-500/20','text-amber-500','border-amber-500/30');
+        }
+
+        function fetchLoc() {
+            if(navigator.geolocation) navigator.geolocation.getCurrentPosition(p=>updateCompassLocationUI(p.coords.latitude,p.coords.longitude,'GPS'), async()=>{
+                try{ const r=await fetch('https://get.geojs.io/v1/ip/geo.json'); const d=await r.json(); updateCompassLocationUI(d.latitude,d.longitude,'IP',d.city); }catch(e){}
+            });
+        }
+
+        function renderCompassArrows() {
+            const cr = document.getElementById('compass-rezeki'), cn = document.getElementById('compass-naga'), ca = document.getElementById('compass-angin');
+            if(globalDegRezeki!==null){ cr.style.transform=`rotate(${globalDegRezeki}deg)`; cr.style.opacity='1'; }
+            if(globalDegNaga!==null){ cn.style.transform=`rotate(${globalDegNaga}deg)`; cn.style.opacity='1'; }
+            if(globalDegAngin!==null){ ca.style.transform=`rotate(${globalDegAngin}deg)`; ca.style.opacity='1'; }
+        }
+
+        function openMapModal() {
+            const m = document.getElementById('map-modal'); m.classList.remove('hidden'); setTimeout(()=>{ m.classList.add('opacity-100');
+                if(!leafMap) {
+                    leafMap = L.map('map-container').setView([currentLat, currentLon], 12);
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:18}).addTo(leafMap);
+                    leafMarker = L.marker([currentLat, currentLon]).addTo(leafMap);
+                    leafMap.on('click', e=>{ currentLat=e.latlng.lat; currentLon=e.latlng.lng; leafMarker.setLatLng(e.latlng); });
+                } else { leafMap.setView([currentLat, currentLon]); leafMarker.setLatLng([currentLat, currentLon]); }
+                leafMap.invalidateSize();
+            },10);
+        }
+
+        async function searchMapLocation() {
+            const q = document.getElementById('map-search-input').value; if(!q) return;
+            try { const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
+            const d = await r.json(); if(d.length>0) { currentLat=parseFloat(d[0].lat); currentLon=parseFloat(d[0].lon); leafMap.flyTo([currentLat,currentLon],13); leafMarker.setLatLng([currentLat,currentLon]); }
+            } catch(e){}
+        }
+
+        function confirmManualLocation() { closeMapModal(); updateCompassLocationUI(currentLat, currentLon, 'Manual'); }
+        function closeMapModal() { document.getElementById('map-modal').classList.remove('opacity-100'); setTimeout(()=>document.getElementById('map-modal').classList.add('hidden'),300); }
+
+        async function fetchPantauanAlam() {
+            hasFetchedAlam = true; const bL = document.getElementById('bmkg-loading'), bC = document.getElementById('bmkg-content'), btn = document.getElementById('btn-refresh-alam');
+            btn.classList.add('animate-spin');
+            try { const r = await fetch('https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json'); const d = await r.json(); const g = d.Infogempa.gempa;
+                bL.style.display='none'; bC.classList.remove('hidden'); document.getElementById('bmkg-mag').textContent = g.Magnitude; document.getElementById('bmkg-wilayah').textContent = g.Wilayah; 
+                document.getElementById('bmkg-kedalaman').textContent = g.Kedalaman; document.getElementById('bmkg-potensi').textContent = g.Potensi; 
+            } catch(e){ bL.textContent = "Gagal memuat API BMKG."; }
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${currentLat}&longitude=${currentLon}&current=wind_speed_10m,precipitation,temperature_2m,surface_pressure`;
+                const res = await fetch(url); const data = await res.json(); const c = data.current;
+                document.getElementById('angin-speed').textContent = c.wind_speed_10m; document.getElementById('atmos-temp').textContent = Math.round(c.temperature_2m);
+                document.getElementById('alt-meter').textContent = Math.round(data.elevation || 0); document.getElementById('alt-pressure').textContent = Math.round(c.surface_pressure);
+                const bc = document.getElementById('bencana-content'); bc.innerHTML = '';
+                if(c.precipitation > 5) bc.innerHTML += `<div class="bg-rose-500/20 p-4 rounded-2xl border border-rose-500/30 text-xs flex justify-between font-bold text-rose-500"><span>Waspada Banjir</span><span>${c.precipitation}mm</span></div>`;
+                if(c.wind_speed_10m > 30) bc.innerHTML += `<div class="bg-amber-500/20 p-4 rounded-2xl border border-amber-500/30 text-xs flex justify-between font-bold text-amber-500"><span>Siaga Angin Kencang</span><span>${c.wind_speed_10m}km/h</span></div>`;
+                if(bc.innerHTML === '') bc.innerHTML = `<div class="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20 text-[9px] uppercase font-bold tracking-[0.2em] text-emerald-500 text-center">Status Alam Aman Terkendali</div>`;
+            } catch(e){}
+            btn.classList.remove('animate-spin'); lucide.createIcons();
+        }
+
+        function showModalMsg(t,d) { document.getElementById('modal-title').textContent=t; document.getElementById('modal-desc').textContent=d; const m=document.getElementById('sensor-modal'); m.classList.remove('hidden'); setTimeout(()=>m.classList.add('opacity-100'),10); }
+        function closeSensorModal() { const m=document.getElementById('sensor-modal'); m.classList.remove('opacity-100'); setTimeout(()=>m.classList.add('hidden'),300); }
+    </script>
+</body>
+</html>
